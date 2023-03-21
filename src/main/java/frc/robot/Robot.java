@@ -10,10 +10,14 @@ import org.photonvision.EstimatedRobotPose;
 import org.photonvision.PhotonCamera;
 import org.photonvision.PhotonPoseEstimator;
 import org.photonvision.PhotonPoseEstimator.PoseStrategy;
+import org.photonvision.targeting.PhotonTrackedTarget;
 
 import edu.wpi.first.math.geometry.Pose2d;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.shuffleboard.Shuffleboard;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
@@ -29,11 +33,11 @@ public class Robot extends TimedRobot {
   Field2d field2d;
 
   PhotonPoseEstimator photonPoseEstimator;
-  EstimatedRobotPose currentRobotPose;
+  Pose3d currentRobotPose;
   Pose2d referencePose;
 
   Robot(){
-    camera = new PhotonCamera("photonvision");
+    camera = new PhotonCamera("HD_Webcam_C525");
     photonPoseEstimator = new PhotonPoseEstimator(Constants.APRIL_TAG_FIELD_LAYOUT, PoseStrategy.AVERAGE_BEST_TARGETS, camera, new Transform3d());
     field2d = new Field2d();
     referencePose = new Pose2d();
@@ -51,12 +55,27 @@ public class Robot extends TimedRobot {
 
   @Override
   public void robotPeriodic() {
-    currentRobotPose = photonPoseEstimator.update().get();
-    field2d.setRobotPose(currentRobotPose.estimatedPose.toPose2d());
+    // SmartDashboard.putNumber("Robot x:", getRobotPose().getX());
+    // SmartDashboard.putNumber("Robot y:", getRobotPose().getY());
 
-    SmartDashboard.putData("Robot Pose :", field2d);
-    SmartDashboard.putNumber("Robot X : ", currentRobotPose.estimatedPose.getX());
-    SmartDashboard.putNumber("Robot Y : ", currentRobotPose.estimatedPose.getY());
-    SmartDashboard.putNumber("Robot Heading : ", currentRobotPose.estimatedPose.getRotation().getAngle());
+    //field2d.setRobotPose(getRobotPose().toPose2d()); 
+    getRobotPose();
+    SmartDashboard.putData(field2d);
+  }
+
+  public Pose3d getRobotPose(){
+    try{
+    PhotonTrackedTarget photonTrackedTarget = camera.getLatestResult().getBestTarget();
+    int aprilTagId = photonTrackedTarget.getFiducialId();
+    //currentRobotPose = Constants.aprilTags.get(aprilTagId).pose.plus(photonTrackedTarget.getBestCameraToTarget());
+    System.out.println("April Tag Id : "+aprilTagId);
+    currentRobotPose = Constants.aprilTags.get(aprilTagId).pose.plus(photonTrackedTarget.getBestCameraToTarget());
+    System.out.println("X :"+currentRobotPose.getX());
+    System.out.println("Y :"+currentRobotPose.getY());
+    field2d.setRobotPose(currentRobotPose.getX(), currentRobotPose.getY(), new Rotation2d());
+    }catch(Exception exception){
+      exception.printStackTrace();
+    }
+    return currentRobotPose;
   }
 }
